@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015-2016 Evolveum
+ * Copyright (c) 2015-2018 Evolveum
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,12 @@ package com.evolveum.polygon.connector.ldap;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Map;
 
@@ -29,7 +33,6 @@ import org.apache.directory.api.ldap.model.cursor.EntryCursor;
 import org.apache.directory.api.ldap.model.cursor.SearchCursor;
 import org.apache.directory.api.ldap.model.entry.Attribute;
 import org.apache.directory.api.ldap.model.entry.Entry;
-import org.apache.directory.api.ldap.model.entry.StringValue;
 import org.apache.directory.api.ldap.model.entry.Value;
 import org.apache.directory.api.ldap.model.exception.LdapAdminLimitExceededException;
 import org.apache.directory.api.ldap.model.exception.LdapAffectMultipleDsaException;
@@ -76,7 +79,6 @@ import org.apache.directory.api.util.GeneralizedTime;
 import org.apache.directory.ldap.client.api.LdapConnectionConfig;
 import org.apache.directory.ldap.client.api.LdapNetworkConnection;
 import org.apache.directory.ldap.client.api.exception.InvalidConnectionException;
-import org.identityconnectors.common.Base64;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.AlreadyExistsException;
 import org.identityconnectors.framework.common.exceptions.ConfigurationException;
@@ -115,11 +117,11 @@ public class LdapUtil {
 		if (attribute == null) {
 			return null;
 		}
-		Value<?> value = attribute.get();
+		Value value = attribute.get();
 		if (value == null) {
 			return null;
 		}
-		return value.getString();
+		return value.getValue();
 	}
 	
 	public static Integer getIntegerAttribute(Entry entry, String attrName, Integer defaultVal) {
@@ -166,6 +168,32 @@ public class LdapUtil {
 			return gtime.toGeneralizedTimeWithoutFraction();
 		}
 	}
+
+	public static String toGeneralizedTime(ZonedDateTime zdt, boolean fractionalPart) {
+		// Maybe we can do a nicer and simpler time conversion?
+		GregorianCalendar calendar = GregorianCalendar.from(zdt);
+		GeneralizedTime gtime = new GeneralizedTime(calendar);
+		if (fractionalPart) {
+			return gtime.toGeneralizedTime();
+		} else {
+			return gtime.toGeneralizedTimeWithoutFraction();
+		}
+	}
+
+	public static ZonedDateTime generalizedTimeStringToZonedDateTime(String generalizedTimeString) throws ParseException {
+		// Maybe we can do a nicer and simpler time conversion?
+		GeneralizedTime gt = new GeneralizedTime(generalizedTimeString);
+		GregorianCalendar gcal;
+		Calendar cal = gt.getCalendar();
+		if (cal instanceof GregorianCalendar) {
+			gcal = (GregorianCalendar) cal;
+		} else {
+			gcal = new GregorianCalendar();
+			gcal.setTimeInMillis(cal.getTimeInMillis());
+		}
+		return gcal.toZonedDateTime();
+	}
+
 	
 	public static Boolean toBoolean(String stringVal, Boolean defaultVal) {
 		if (stringVal == null) {
@@ -350,7 +378,7 @@ public class LdapUtil {
 	
 	public static ExprNode createObjectClassFilter(
 			org.apache.directory.api.ldap.model.schema.ObjectClass ldapObjectClass) {
-		return new EqualityNode<>(SchemaConstants.OBJECT_CLASS_AT, new StringValue(ldapObjectClass.getName()));
+		return new EqualityNode<>(SchemaConstants.OBJECT_CLASS_AT, ldapObjectClass.getName());
 	}
 	
 	public static boolean containsFilter(ExprNode filterNode, String attrName) {
@@ -379,7 +407,7 @@ public class LdapUtil {
 	public static ExprNode createUidSearchFilter(String uidValue, 
 			org.apache.directory.api.ldap.model.schema.ObjectClass ldapObjectClass, AbstractSchemaTranslator schemaTranslator) {
 		AttributeType ldapAttributeType = schemaTranslator.toLdapAttribute(ldapObjectClass, Uid.NAME);
-		Value<Object> ldapValue = schemaTranslator.toLdapIdentifierValue(ldapAttributeType, uidValue);
+		Value ldapValue = schemaTranslator.toLdapIdentifierValue(ldapAttributeType, uidValue);
 		return new EqualityNode<>(ldapAttributeType, ldapValue);
 	}
 
@@ -604,8 +632,8 @@ public class LdapUtil {
 		// It may be less efficient, but it looks like it is more reliable.
 		Attribute objectClassAttribute = entry.get(SchemaConstants.OBJECT_CLASS_AT); 
 		
-		for (Value<?> objectClassVal: objectClassAttribute) {
-			if (ldapObjectClass.getName().equalsIgnoreCase(objectClassVal.getString())) {
+		for (Value objectClassVal: objectClassAttribute) {
+			if (ldapObjectClass.getName().equalsIgnoreCase(objectClassVal.getValue())) {
 				return true;
 			}
 		}
@@ -614,6 +642,9 @@ public class LdapUtil {
 	}
 	
 	public static String binaryToHex(byte[] bytes) {
+		if (bytes == null) {
+			return null;
+		}
 		StringBuilder sb = new StringBuilder(bytes.length * 2);
 		for (byte b : bytes) {
 			sb.append(String.format("%02x", b & 0xff));
@@ -636,9 +667,9 @@ public class LdapUtil {
 		if (modifiersNameAttribute == null) {
 			return false;
 		}
-		for (Value<?> modifiersNameVal: modifiersNameAttribute) {
+		for (Value modifiersNameVal: modifiersNameAttribute) {
 			for (String modifiersNameToFilterOut: modifiersNamesToFilterOut) {
-				if (modifiersNameToFilterOut.equals(modifiersNameVal.getString())) {
+				if (modifiersNameToFilterOut.equals(modifiersNameVal.getValue())) {
 					return true;
 				}
 			}
@@ -740,7 +771,7 @@ public class LdapUtil {
 			if (cookie == null) {
 				sb.append("null");
 			} else {
-				sb.append(Base64.encode(cookie));
+				sb.append(Base64.getEncoder().encodeToString(cookie));
 			}
 			sb.append("),");
 		} else if (control instanceof VirtualListViewRequest) {
@@ -757,7 +788,7 @@ public class LdapUtil {
 			if (contextId == null) {
 				sb.append("null");
 			} else {
-				sb.append(Base64.encode(contextId));
+				sb.append(Base64.getEncoder().encodeToString(contextId));
 			}
 			sb.append("),");
 		} else if (control instanceof SortRequest) {
@@ -814,5 +845,5 @@ public class LdapUtil {
 		
 		return upperSA.isAncestorOf(lowerSA);
 	}
-
+	
 }
