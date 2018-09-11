@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.math.BigInteger;
 
 import javax.naming.directory.SchemaViolationException;
 
@@ -726,7 +727,15 @@ public abstract class AbstractSchemaTranslator<C extends AbstractLdapConfigurati
 			} else if (SchemaConstants.BOOLEAN_SYNTAX.equals(syntaxOid)) {
 				return Boolean.parseBoolean(ldapValue.getString());
 			} else if (isIntegerSyntax(syntaxOid)) {
-				return Integer.parseInt(ldapValue.getString());
+				BigInteger bi = new BigInteger(ldapValue.getString());
+				try {
+					int intval = bi.intValueExact();
+					return intval;
+				} catch (ArithmeticException e) {
+					return bi;
+				}
+				// LOG.ok("Integer type for {0} is {1}", ldapAttributeName, ldapValue.getClass());
+				// return Integer.parseInt(ldapValue.getString());
 			} else if (isLongSyntax(syntaxOid)) {
 				return Long.parseLong(ldapValue.getString());
 			} else if (isBinarySyntax(syntaxOid)) {
@@ -1023,7 +1032,7 @@ public abstract class AbstractSchemaTranslator<C extends AbstractLdapConfigurati
 			for (org.apache.directory.api.ldap.model.schema.ObjectClass ldapAuxiliaryObjectClass: ldapObjectClasses.getLdapAuxiliaryObjectClasses()) {
 				auxAttrBuilder.addValue(ldapAuxiliaryObjectClass.getName());
 				ObjectClassInfo objectClassInfo = icfSchema.findObjectClassInfo(ldapAuxiliaryObjectClass.getName());
-//				LOG.ok("ConnId object class info for auxiliary object class {0}:\n{1}", ldapAuxiliaryObjectClass.getName(), objectClassInfo);
+				LOG.ok("ConnId object class info for auxiliary object class {0}:\n{1}", ldapAuxiliaryObjectClass.getName(), objectClassInfo);
 				icfAuxiliaryObjectClassInfos.add(objectClassInfo);
 			}
 			cob.addAttribute(auxAttrBuilder.build());
@@ -1050,13 +1059,13 @@ public abstract class AbstractSchemaTranslator<C extends AbstractLdapConfigurati
 		while (iterator.hasNext()) {
 			org.apache.directory.api.ldap.model.entry.Attribute ldapAttribute = iterator.next();
 			String ldapAttrName = getLdapAttributeName(ldapAttribute);
-//			LOG.ok("Processing attribute {0}", ldapAttrName);
+			LOG.ok("Processing attribute {0}", ldapAttrName);
 			if (!shouldTranslateAttribute(ldapAttrName)) {
-//				LOG.ok("Should not translate attribute {0}, skipping", ldapAttrName);
+				LOG.ok("Should not translate attribute {0}, skipping", ldapAttrName);
 				continue;
 			}
 			AttributeType attributeType = schemaManager.getAttributeType(ldapAttrName);
-//			LOG.ok("Type for attribute {0}: {1}", ldapAttrName, attributeType);
+			LOG.ok("Type for attribute {0}: {1}", ldapAttrName, attributeType);
 			String ldapAttributeNameFromSchema = ldapAttrName;
 			if (attributeType == null) {
 				if (!configuration.isAllowUnknownAttributes()) {
@@ -1069,7 +1078,7 @@ public abstract class AbstractSchemaTranslator<C extends AbstractLdapConfigurati
 				continue;
 			}
 			Attribute icfAttribute = toIcfAttribute(connection, entry, ldapAttribute, attributeHandler);
-//			LOG.ok("ConnId attribute for {0}: {1}", ldapAttrName, icfAttribute);
+			LOG.ok("ConnId attribute for {0}: {1}", ldapAttrName, icfAttribute);
 			if (icfAttribute == null) {
 				continue;
 			}
@@ -1077,14 +1086,14 @@ public abstract class AbstractSchemaTranslator<C extends AbstractLdapConfigurati
 			if (attributeInfo == null) {
 				for (ObjectClassInfo icfAuxiliaryObjectClassInfo: icfAuxiliaryObjectClassInfos) {
 					attributeInfo = SchemaUtil.findAttributeInfo(icfAuxiliaryObjectClassInfo, icfAttribute);
-//					LOG.ok("Looking for ConnId attribute {0} info in auxiliary class {1}: {2}", icfAttribute, icfAuxiliaryObjectClassInfo==null?null:icfAuxiliaryObjectClassInfo.getType(), attributeInfo);
+					LOG.ok("Looking for ConnId attribute {0} info in auxiliary class {1}: {2}", icfAttribute, icfAuxiliaryObjectClassInfo==null?null:icfAuxiliaryObjectClassInfo.getType(), attributeInfo);
 					if (attributeInfo != null) {
 						break;
 					}
-//					LOG.ok("Failed to find attribute in: {0}", icfAuxiliaryObjectClassInfo);
+					LOG.ok("Failed to find attribute in: {0}", icfAuxiliaryObjectClassInfo);
 				}
 			}
-//			LOG.ok("ConnId attribute info for {0} ({1}): {2}", icfAttribute.getName(), ldapAttrName, attributeInfo);
+			LOG.ok("ConnId attribute info for {0} ({1}): {2}", icfAttribute.getName(), ldapAttrName, attributeInfo);
 			if (attributeInfo != null) {
 				// Avoid sending unknown attributes (such as createtimestamp)
 				cob.addAttribute(icfAttribute);
@@ -1161,17 +1170,17 @@ public abstract class AbstractSchemaTranslator<C extends AbstractLdapConfigurati
 				throw new InvalidAttributeValueException(e.getMessage(), e);
 			}
 			if (ldapObjectClass.isStructural()) {
-//				LOG.ok("Objectclass {0}: structural)", ldapObjectClass.getName());
+				LOG.ok("Objectclass {0}: structural)", ldapObjectClass.getName());
 				ocs.getLdapStructuralObjectClasses().add(ldapObjectClass);
 			} else if (ldapObjectClass.isAuxiliary()) {
-//				LOG.ok("Objectclass {0}: auxiliary)", ldapObjectClass.getName());
+				LOG.ok("Objectclass {0}: auxiliary)", ldapObjectClass.getName());
 				ocs.getLdapAuxiliaryObjectClasses().add(ldapObjectClass);
 			} else if (ldapObjectClass.isAbstract()) {
-//				LOG.ok("Objectclass {0}: abstract)", ldapObjectClass.getName());
+				LOG.ok("Objectclass {0}: abstract)", ldapObjectClass.getName());
 				// We are ignoring this. This is 'top' and things like that.
 				// These are not directly useful, not even in the alternative mechanism.
 			} else {
-//				LOG.ok("Objectclass {0}: outstanding)", ldapObjectClass.getName());
+				LOG.ok("Objectclass {0}: outstanding)", ldapObjectClass.getName());
 				outstandingObjectClasses.add(ldapObjectClass);
 			}
 		}
@@ -1208,7 +1217,7 @@ public abstract class AbstractSchemaTranslator<C extends AbstractLdapConfigurati
 				ocs.getLdapAuxiliaryObjectClasses().addAll(outstandingObjectClasses);
 			}
 		}
-//		LOG.ok("Detected objectclasses: {0})", ocs);
+		LOG.ok("Detected objectclasses: {0})", ocs);
 		return ocs;
 	}
 	
@@ -1550,7 +1559,7 @@ public abstract class AbstractSchemaTranslator<C extends AbstractLdapConfigurati
 		addToSyntaxMap(SchemaConstants.GENERALIZED_TIME_SYNTAX, Date.class); // Date.class is a placeholder. It will be replaced by real value in the main code
 		addToSyntaxMap(SchemaConstants.GUIDE_SYNTAX, String.class);
 		addToSyntaxMap(SchemaConstants.IA5_STRING_SYNTAX, String.class);
-		addToSyntaxMap(SchemaConstants.INTEGER_SYNTAX, int.class);
+		addToSyntaxMap(SchemaConstants.INTEGER_SYNTAX, BigInteger.class);
 		addToSyntaxMap(SchemaConstants.JPEG_SYNTAX, byte[].class);
 		addToSyntaxMap(SchemaConstants.MASTER_AND_SHADOW_ACCESS_POINTS_SYNTAX, String.class);
 		addToSyntaxMap(SchemaConstants.MATCHING_RULE_DESCRIPTION_SYNTAX, String.class);
