@@ -80,7 +80,7 @@ public abstract class SyncStrategy<C extends AbstractLdapConfiguration> {
 			}
 		}
 		if (modifiersNamesToFilterOut != null && modifiersNamesToFilterOut.length > 0) {
-			if (LdapUtil.hasModifierName(entry, modifiersNamesToFilterOut)) {
+			if (LdapUtil.hasModifierName(getConfiguration(), modifiersNamesToFilterOut)) {
 				LOG.ok("Skipping synchronization of entry {0} because modifiers name is filtered out", entry.getDn());
 				return false;
 			}

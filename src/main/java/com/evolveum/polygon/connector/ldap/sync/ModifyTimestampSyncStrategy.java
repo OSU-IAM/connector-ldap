@@ -95,9 +95,9 @@ public class ModifyTimestampSyncStrategy<C extends AbstractLdapConfiguration> ex
 		}
 		
 		String[] attributesToGet = LdapUtil.getAttributesToGet(ldapObjectClass, options, 
-				getSchemaTranslator(), SchemaConstants.MODIFY_TIMESTAMP_AT, 
-				SchemaConstants.CREATE_TIMESTAMP_AT, SchemaConstants.MODIFIERS_NAME_AT, 
-				SchemaConstants.CREATORS_NAME_AT);
+				getSchemaTranslator(), getConfiguration().getSyncModifyTimestampAttr, 
+				getConfiguration().getSyncCreateTimestampAttr, getConfiguration().getSyncModifiersNameAttr, 
+				getConfiguration().getSyncCreatorsNameAttr);
 		
 		String baseContext = getConfiguration().getBaseContext();
 		if (LOG.isOk()) {
@@ -160,8 +160,8 @@ public class ModifyTimestampSyncStrategy<C extends AbstractLdapConfiguration> ex
 		Value<String> ldapValue = new StringValue(fromTokenValue);
 		ExprNode filterNode =
 				new OrNode(
-						new GreaterEqNode<String>(SchemaConstants.MODIFY_TIMESTAMP_AT, ldapValue),
-						new GreaterEqNode<String>(SchemaConstants.CREATE_TIMESTAMP_AT, ldapValue)
+						new GreaterEqNode<String>(getConfiguration().getSyncModifyTimestampAttr, ldapValue),
+						new GreaterEqNode<String>(getConfiguration().getSyncCreateTimestampAttr, ldapValue)
 				);
 		if (ldapObjectClass != null) {
 			filterNode = new AndNode(new EqualityNode<String>(SchemaConstants.OBJECT_CLASS_AT, 

@@ -265,6 +265,15 @@ public abstract class AbstractLdapConfiguration extends AbstractConfiguration {
     public static final String SYNCHRONIZATION_STRATEGY_AD_DIR_SYNC = "adDirSync";
     
     /**
+     * Attribute names when using modifyTimestamp synchronization strategy.
+     * Defaults to schemaConstants values
+     */
+    private String syncModifyTimestampAttr = SchemaConstants.MODIFY_TIMESTAMP_AT;
+    private String syncCreateTimestampAttr = SchemaConstants.CREATE_TIMESTAMP_AT;
+    private String syncModifiersNameAttr = SchemaConstants.MODIFIERS_NAME_AT;
+    private String syncCreatorsNameAttr = SchemaConstants.CREATORS_NAME_AT;
+
+    /**
      * List of base contexts DNs that will be accepted during synchronization.
      * If set to empty then all DNs will be accepted.
      */
@@ -696,6 +705,42 @@ public abstract class AbstractLdapConfiguration extends AbstractConfiguration {
 
 	public void setAlternativeObjectClassDetection(boolean alternativeObjectClassDetection) {
 		this.alternativeObjectClassDetection = alternativeObjectClassDetection;
+	}
+
+	@ConfigurationProperty(order = 40)
+	public String getSyncModifyTimestampAttr() {
+		return syncModifyTimestampAttr;
+	}
+
+	public void setSyncModifyTimestampAttr(String syncModifyTimestampAttr) {
+		this.syncModifyTimestampAttr = syncModifyTimestampAttr;
+	}
+
+	@ConfigurationProperty(order = 41)
+	public String getSyncCreateTimestampAttr() {
+		return syncCreateTimestampAttr;
+	}
+
+	public void setSyncCreateTimestampAttr(String syncCreateTimestampAttr) {
+		this.syncCreateTimestampAttr = syncCreateTimestampAttr;
+	}
+
+	@ConfigurationProperty(order = 42)
+	public String getSyncModifiersNameAttr() {
+		return syncModifiersNameAttr;
+	}
+
+	public void setSyncModifiersNameAttr(String syncModifiersNameAttr) {
+		this.syncModifiersNameAttr = syncModifiersNameAttr;
+	}
+
+	@ConfigurationProperty(order = 43)
+	public String getSyncCreatorsNameAttr() {
+		return syncCreatorsNameAttr;
+	}
+
+	public void setSyncCreatorsNameAttr(String syncCreatorsNameAttr) {
+		this.syncCreatorsNameAttr = syncCreatorsNameAttr;
 	}
 
 	@Override

@@ -631,8 +631,8 @@ public class LdapUtil {
 		return bytes;
 	}
 	
-	public static boolean hasModifierName(Entry entry, String[] modifiersNamesToFilterOut) {
-		org.apache.directory.api.ldap.model.entry.Attribute modifiersNameAttribute = entry.get(SchemaConstants.MODIFIERS_NAME_AT);
+	public static boolean hasModifierName(AbstractLdapConfiguration configuration, String[] modifiersNamesToFilterOut) {
+		modifiersNameAttribute = configuration.getSyncModifiersNameAttr();
 		if (modifiersNameAttribute == null) {
 			return false;
 		}
